@@ -1,247 +1,1006 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>P2R Team Roster Board</title>
-  <style>
-    :root {
-      --p2: #4caf50; --p3: #2196f3; --p4: #9c27b0;
-      --header: #333; --light: #fff; --shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
-      margin: 0; padding: 20px; background: #f5f5f5;
-    }
-    .header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 20px;
-    }
-    h1 { color: var(--header); margin: 0; font-size: 1.8em; }
-    .controls button {
-      padding: 8px 16px; border: none; border-radius: 4px;
-      cursor: pointer; font-weight: bold; transition: .3s;
-    }
-    #wipeBtn { background: #f44336; color: #fff; }
-    #wipeBtn:hover { background: #d32f2f; }
-    .floors-container { display: flex; flex-direction: column; gap: 20px; }
-    .floor-row { display: flex; gap: 20px; flex-wrap: wrap; }
-    .floor {
-      flex: 1; min-width: 400px; background: #fff;
-      border-radius: 8px; box-shadow: var(--shadow); overflow: hidden;
-    }
-    .floor-header {
-      padding: 15px; color: var(--light); font-weight: bold;
-      display: flex; justify-content: space-between;
-    }
-    .floor.p2 .floor-header { background: var(--p2); }
-    .floor.p3 .floor-header { background: var(--p3); }
-    .floor.p4 .floor-header { background: var(--p4); }
-    .pa-name input { font-size: 1.1em; padding: 4px; }
-    .count { background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 12px; font-size: .9em; }
-    .floor-content { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-    .section-title {
-      font-weight: bold; margin-bottom: 10px; color: var(--header);
-      border-bottom: 1px solid #eee; padding-bottom: 5px;
-    }
-    .stations-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 15px; }
-    .station-card {
-      border: 1px solid #eee; border-radius: 6px; padding: 10px;
-    }
-    .station-header { font-weight: bold; text-align: center; margin-bottom: 8px; border-bottom: 1px solid #eee; }
-    .station-inputs { display: flex; gap: 8px; }
-    .station-input-group { flex: 1; }
-    .station-label { font-size: .8em; color: #666; margin-bottom: 3px; text-align: center; }
-    input[type="text"] {
-      padding: 6px; border: 1px solid #ddd; border-radius: 4px;
-      width: 100%; box-sizing: border-box; text-align: center; font-size: .9em;
-    }
-    input:focus { outline: none; border-color: #aaa; }
-    .indirects { display: flex; flex-wrap: wrap; gap: 10px; }
-    .indirect { flex: 1; min-width: 120px; }
-    .stats-bar {
-      background: #fff; padding: 15px; border-radius: 8px;
-      box-shadow: var(--shadow); margin-top: 20px;
-    }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 15px; }
-    .stat-card { background: #f9f9f9; padding: 15px; border-radius: 6px; text-align: center; }
-    .stat-value { font-size: 1.5em; font-weight: bold; margin: 5px 0; }
-    .stat-label { font-size: .9em; color: #666; }
-    @media(max-width:768px) {
-      .floor-row { flex-direction: column; }
-      .stations-container { grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>P2R Team Roster Board</h1>
-    <div class="controls"><button id="wipeBtn">Wipe All Data</button></div>
-  </div>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P2R Team Roster Board</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script src="config.js"></script>
+<script>
 
-  <div class="floors-container">
-    <div class="floor-row">
-      <!-- P2 Floor -->
-      <div class="floor p2">
-        <div class="floor-header">
-          <div class="pa-name">PA: <input type="text" id="p2-pa" placeholder="Name" class="pa-input"></div>
-          <div class="count">Pickers: <span id="p2-pickers-count">0</span> | Packers: <span id="p2-packers-count">0</span></div>
-        </div>
-        <div class="floor-content">
-          <div class="section">
-            <div class="section-title">Stations 201-212</div>
-            <div class="stations-container" id="p2-stations"></div>
-          </div>
-          <div class="section">
-            <div class="section-title">Indirects</div>
-            <div class="indirects">
-              <div class="indirect">
-                <div class="station-label">PS</div>
-                <input type="text" id="p2-ps" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">WS</div>
-                <input type="text" id="p2-ws" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">PP</div>
-                <input type="text" id="p2-pp" placeholder="Name">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- P3 Floor -->
-      <div class="floor p3">
-        <div class="floor-header">
-          <div class="pa-name">PA: <input type="text" id="p3-pa" placeholder="Name" class="pa-input"></div>
-          <div class="count">Pickers: <span id="p3-pickers-count">0</span> | Packers: <span id="p3-packers-count">0</span></div>
-        </div>
-        <div class="floor-content">
-          <div class="section">
-            <div class="section-title">Stations 301-312</div>
-            <div class="stations-container" id="p3-stations"></div>
-          </div>
-          <div class="section">
-            <div class="section-title">Indirects</div>
-            <div class="indirects">
-              <div class="indirect">
-                <div class="station-label">PS</div>
-                <input type="text" id="p3-ps" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">WS</div>
-                <input type="text" id="p3-ws" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">PP</div>
-                <input type="text" id="p3-pp" placeholder="Name">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="floor-row">
-      <!-- P4 Floor -->
-      <div class="floor p4">
-        <div class="floor-header">
-          <div class="pa-name">PA: <input type="text" id="p4-pa" placeholder="Name" class="pa-input"></div>
-          <div class="count">Pickers: <span id="p4-pickers-count">0</span> | Packers: <span id="p4-packers-count">0</span></div>
-        </div>
-        <div class="floor-content">
-          <div class="section">
-            <div class="section-title">Stations 401-412</div>
-            <div class="stations-container" id="p4-stations"></div>
-          </div>
-          <div class="section">
-            <div class="section-title">Indirects</div>
-            <div class="indirects">
-              <div class="indirect">
-                <div class="station-label">PS</div>
-                <input type="text" id="p4-ps" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">WS</div>
-                <input type="text" id="p4-ws" placeholder="Name">
-              </div>
-              <div class="indirect">
-                <div class="station-label">PP</div>
-                <input type="text" id="p4-pp" placeholder="Name">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="floor" style="visibility: hidden;"></div>
-    </div>
-  </div>
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const docRef = db.collection("rosters").doc("latest");
 
-  <div class="stats-bar">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total Pickers</div>
-        <div class="stat-value" id="total-pickers">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Packers</div>
-        <div class="stat-value" id="total-packers">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Team</div>
-        <div class="stat-value" id="total-members">0</div>
-      </div>
-    </div>
-  </div>
+// Helper functions
+function showStatus(message, isError = false) {
+  const statusEl = document.getElementById('status-message');
+  if (!statusEl) return;
+  
+  statusEl.textContent = message;
+  statusEl.className = isError ? 'status-message error show' : 'status-message show';
+  
+  setTimeout(() => {
+    statusEl.className = isError ? 'status-message error' : 'status-message';
+  }, 3000);
+}
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const floors = ['p2', 'p3', 'p4'], stations = {p2:[201,212], p3:[301,312], p4:[401,412]};
-      const container = id => document.getElementById(id + '-stations');
-      const createCard = (f, i) => {
-        const card = document.createElement('div'); card.className = 'station-card';
-        card.innerHTML = `<div class="station-header">${i}</div>
-          <div class="station-inputs">
-            <div class="station-input-group"><div class="station-label">Picker</div><input id="${f}-picker-${i}" type="text" placeholder="Name"></div>
-            <div class="station-input-group"><div class="station-label">Packers</div><input id="${f}-packer-${i}-01" type="text" placeholder="Packer 1"><input id="${f}-packer-${i}-02" type="text" placeholder="Packer 2"></div>
-          </div>`;
-        return card;
+function formatTimestamp(timestamp) {
+  if (!timestamp) return 'Never';
+  const options = {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  };
+  return timestamp.toLocaleString('en-US', options);
+}
+
+function updateLastSaved(timestamp) {
+  const lastSavedEl = document.getElementById('last-saved');
+  if (lastSavedEl) {
+    lastSavedEl.textContent = `Last updated: ${formatTimestamp(timestamp)}`;
+  }
+}
+
+function updateCounts() {
+  const floors = ['p2', 'p3', 'p4'];
+  let totalPickers = 0;
+  let totalPackers = 0;
+  let totalPS = 0;
+  let totalWS = 0;
+  let totalPP = 0;
+
+  floors.forEach(floor => {
+    const stations = Array.from({ length: 12 }, (_, i) => 
+      floor === 'p2' ? 201 + i : 
+      floor === 'p3' ? 301 + i : 
+      401 + i);
+    
+    let floorPickers = 0;
+    let floorPackers = 0;
+    let activeStations = 0;
+
+    stations.forEach((stationNumber, index) => {
+      // Count active stations
+      const status = document.querySelector(
+        `#${floor}-stations .station-card:nth-child(${index + 1}) .station-status`
+      );
+      if (status && (status.classList.contains('active') || status.dataset.active === 'true')) {
+        activeStations++;
+      }
+
+      // Count all pickers and packers
+      const picker = document.getElementById(`${floor}-picker-${stationNumber}`);
+      if (picker?.value.trim()) floorPickers++;
+
+      const packer1 = document.getElementById(`${floor}-packer1-${stationNumber}`);
+      const packer2 = document.getElementById(`${floor}-packer2-${stationNumber}`);
+      if (packer1?.value.trim()) floorPackers++;
+      if (packer2?.value.trim()) floorPackers++;
+    });
+
+    // Update floor totals display
+    const activeEl = document.getElementById(`${floor}-total-active`);
+    const pickersEl = document.getElementById(`${floor}-total-pickers`);
+    const packersEl = document.getElementById(`${floor}-total-packers`);
+    
+    if (activeEl) activeEl.textContent = activeStations;
+    if (pickersEl) pickersEl.textContent = floorPickers;
+    if (packersEl) packersEl.textContent = floorPackers;
+
+    totalPickers += floorPickers;
+    totalPackers += floorPackers;
+
+    ['ps1', 'ps2'].forEach(ps => {
+      const val = document.getElementById(`${floor}-${ps}`)?.value.trim();
+      if (val) totalPS++;
+    });
+    
+    ['ws1', 'ws2'].forEach(ws => {
+      const val = document.getElementById(`${floor}-${ws}`)?.value.trim();
+      if (val) totalWS++;
+    });
+  });
+
+  for (let i = 1; i <= 4; i++) {
+    const val = document.getElementById(`pp${i}`)?.value.trim();
+    if (val) totalPP++;
+  }
+
+  document.getElementById('sum-indirect-ps').textContent = totalPS;
+  document.getElementById('sum-indirect-ws').textContent = totalWS;
+  document.getElementById('sum-pp').textContent = totalPP;
+
+  const grandTotalEl = document.getElementById('grand-total');
+  if (grandTotalEl) {
+    grandTotalEl.textContent = `Total Team: ${totalPickers + totalPackers + totalPS + totalWS + totalPP}`;
+  }
+}
+
+function saveDataToFirestore(data) {
+  const timestamp = new Date();
+  docRef.set({
+    data: data,
+    timestamp: firebase.firestore.Timestamp.fromDate(timestamp)
+  }, { merge: true })
+  .then(() => {
+    showStatus('Data saved successfully');
+    updateLastSaved(timestamp);
+    updateCounts();
+  })
+  .catch((error) => {
+    console.error("Error saving document: ", error);
+    showStatus('Error saving data: ' + error.message, true);
+  });
+}
+
+function loadDataFromFirestore() {
+  docRef.get()
+    .then((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        applyToUI(data.data);
+        if (data.timestamp) {
+          updateLastSaved(data.timestamp.toDate());
+        }
+        showStatus('Data loaded successfully');
+        // Explicitly update counts after loading
+        updateCounts();
+      } else {
+        showStatus('No data found', true);
+      }
+    })
+    .catch((error) => {
+      console.error("Error getting document:", error);
+      showStatus('Error loading data: ' + error.message, true);
+    });
+}
+
+function collectRosterData() {
+  const data = {};
+  const floors = ['p2', 'p3', 'p4'];
+  const stationsByFloor = {
+    p2: Array.from({ length: 12 }, (_, i) => 201 + i),
+    p3: Array.from({ length: 12 }, (_, i) => 301 + i),
+    p4: Array.from({ length: 12 }, (_, i) => 401 + i)
+  };
+
+  floors.forEach(floor => {
+    data[floor] = { stations: {} };
+    stationsByFloor[floor].forEach((stationNumber, index) => {
+      const status = document.querySelector(
+        `#${floor}-stations .station-card:nth-child(${index + 1}) .station-status`
+      );
+      
+      data[floor].stations[stationNumber] = {
+        picker: document.getElementById(`${floor}-picker-${stationNumber}`)?.value || '',
+        packer1: document.getElementById(`${floor}-packer1-${stationNumber}`)?.value || '',
+        packer2: document.getElementById(`${floor}-packer2-${stationNumber}`)?.value || '',
+        active: status?.classList.contains('active') || false
       };
-      floors.forEach(f => {
-        const [start,end] = stations[f];
-        for (let i = start; i <= end; i++) container(f).appendChild(createCard(f, i));
+    });
+
+    const pa = document.getElementById(`${floor}-pa`);
+    if (pa) data[floor].pa = pa.value || '';
+
+    ['ps1', 'ps2', 'ws1', 'ws2'].forEach(role => {
+      const input = document.getElementById(`${floor}-${role}`);
+      if (input) data[floor][role] = input.value || '';
+    });
+  });
+
+  data.pp = {};
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`pp${i}`);
+    if (input) data.pp[`pp${i}`] = input.value || '';
+  }
+
+  return data;
+}
+
+function applyToUI(data) {
+  if (!data) return;
+
+  const floors = ['p2', 'p3', 'p4'];
+  const stationsByFloor = {
+    p2: Array.from({ length: 12 }, (_, i) => 201 + i),
+    p3: Array.from({ length: 12 }, (_, i) => 301 + i),
+    p4: Array.from({ length: 12 }, (_, i) => 401 + i)
+  };
+
+  floors.forEach(floor => {
+    if (!data[floor]) return;
+
+    stationsByFloor[floor].forEach((stationNumber, index) => {
+      const stationData = data[floor].stations?.[stationNumber];
+      if (!stationData) return;
+
+      const status = document.querySelector(
+        `#${floor}-stations .station-card:nth-child(${index + 1}) .station-status`
+      );
+      
+      if (status) {
+        status.classList.toggle('active', stationData.active);
+        status.classList.toggle('inactive', !stationData.active);
+        status.textContent = stationData.active ? 'Yes' : 'No';
+        status.setAttribute('aria-pressed', stationData.active.toString());
+        status.dataset.active = stationData.active.toString(); // Ensure dataset is updated
+      }
+
+      const picker = document.getElementById(`${floor}-picker-${stationNumber}`);
+      const packer1 = document.getElementById(`${floor}-packer1-${stationNumber}`);
+      const packer2 = document.getElementById(`${floor}-packer2-${stationNumber}`);
+
+      if (picker) picker.value = stationData.picker || '';
+      if (packer1) packer1.value = stationData.packer1 || '';
+      if (packer2) packer2.value = stationData.packer2 || '';
+    });
+
+    if (data[floor].pa !== undefined) {
+      const pa = document.getElementById(`${floor}-pa`);
+      if (pa) pa.value = data[floor].pa;
+    }
+
+    ['ps1', 'ps2', 'ws1', 'ws2'].forEach(role => {
+      if (data[floor][role] !== undefined) {
+        const input = document.getElementById(`${floor}-${role}`);
+        if (input) input.value = data[floor][role];
+      }
+    });
+  });
+
+  if (data.pp) {
+    for (let i = 1; i <= 4; i++) {
+      const val = data.pp[`pp${i}`];
+      if (val !== undefined) {
+        const ppInput = document.getElementById(`pp${i}`);
+        if (ppInput) ppInput.value = val;
+      }
+    }
+  }
+}
+
+function toggleActive(statusElem) {
+  const isActive = statusElem.classList.contains('active');
+  statusElem.classList.toggle('active', !isActive);
+  statusElem.classList.toggle('inactive', isActive);
+  statusElem.textContent = isActive ? 'No' : 'Yes';
+  statusElem.setAttribute('aria-pressed', (!isActive).toString());
+  statusElem.dataset.active = (!isActive).toString(); // Ensure dataset is updated
+  
+  // Update counts immediately before saving
+  updateCounts();
+  saveDataToFirestore(collectRosterData());
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    db.enablePersistence({ synchronizeTabs: true })
+      .catch((err) => {
+        console.warn("Firestore persistence disabled:", err);
       });
-      const count = p => [...document.querySelectorAll(`input[id^="${p}"]`)].filter(i => i.value.trim()).length;
-      const update = () => {
-        const totals = { pickers:0, packers:0 };
-        floors.forEach(f => {
-          const p = count(`${f}-picker-`);
-          const pk = count(`${f}-packer-`);
-          document.getElementById(`${f}-pickers-count`).textContent = p;
-          document.getElementById(`${f}-packers-count`).textContent = pk;
-          totals.pickers += p; totals.packers += pk;
-        });
-        const indirectCount = () => floors.map(f => ['ps','ws','pp'].map(id => document.getElementById(`${f}-${id}`)?.value.trim()?1:0).reduce((a,b)=>a+b,0)).reduce((a,b)=>a+b,0);
-        document.getElementById('total-pickers').textContent = totals.pickers;
-        document.getElementById('total-packers').textContent = totals.packers;
-        document.getElementById('total-members').textContent = totals.pickers + totals.packers + indirectCount();
-      };
-      const save = () => localStorage.setItem('p2rRosterData', JSON.stringify(Object.fromEntries([...document.querySelectorAll('input')].map(i=>[i.id,i.value]))));
-      const load = () => {
-        const d = JSON.parse(localStorage.getItem('p2rRosterData')||'{}');
-        for (const [id,v] of Object.entries(d)) if (document.getElementById(id)) document.getElementById(id).value = v;
-        update();
-      };
-      load();
-      document.querySelectorAll('input').forEach(i => i.addEventListener('input', () => { update(); save(); }));
-      document.getElementById('wipeBtn').addEventListener('click', () => {
-        if (confirm('Wipe all data? This cannot be undone.')) {
-          document.querySelectorAll('input').forEach(i=>i.value='');
-          localStorage.removeItem('p2rRosterData');
-          update();
+  } catch (e) {
+    console.warn("Couldn't enable persistence:", e);
+  }
+
+  loadDataFromFirestore();
+
+  const floors = ['p2', 'p3', 'p4'];
+  const stationsByFloor = {
+    p2: Array.from({ length: 12 }, (_, i) => 201 + i),
+    p3: Array.from({ length: 12 }, (_, i) => 301 + i),
+    p4: Array.from({ length: 12 }, (_, i) => 401 + i)
+  };
+
+  floors.forEach(floor => {
+    const container = document.getElementById(`${floor}-stations`);
+    stationsByFloor[floor].forEach(stationNumber => {
+      const card = document.createElement('div');
+      card.className = 'station-card';
+
+      const status = document.createElement('div');
+      status.className = 'station-status inactive';
+      status.textContent = 'No';
+      status.setAttribute('role', 'button');
+      status.setAttribute('tabindex', '0');
+      status.setAttribute('aria-pressed', 'false');
+      status.setAttribute('aria-label', `${floor.toUpperCase()} Station ${stationNumber} Active status`);
+      status.addEventListener('click', () => toggleActive(status));
+      status.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleActive(status);
         }
       });
+      card.appendChild(status);
+
+      const stationLabel = document.createElement('div');
+      stationLabel.className = 'station-header';
+      stationLabel.textContent = stationNumber;
+      card.appendChild(stationLabel);
+
+      const pickerGroup = document.createElement('div');
+      pickerGroup.className = 'station-input-group picker-group';
+      const pickerLabel = document.createElement('label');
+      pickerLabel.className = 'station-label';
+      pickerLabel.textContent = 'Picker';
+      pickerLabel.setAttribute('for', `${floor}-picker-${stationNumber}`);
+      pickerGroup.appendChild(pickerLabel);
+      const pickerInput = document.createElement('input');
+      pickerInput.type = 'text';
+      pickerInput.id = `${floor}-picker-${stationNumber}`;
+      pickerInput.autocomplete = 'off';
+      pickerInput.addEventListener('input', () => {
+        saveDataToFirestore(collectRosterData());
+        updateCounts();
+      });
+      pickerGroup.appendChild(pickerInput);
+
+      const packerGroup = document.createElement('div');
+      packerGroup.className = 'station-input-group packer-group';
+      const packerLabel = document.createElement('label');
+      packerLabel.className = 'station-label';
+      packerLabel.textContent = 'Packer';
+      packerLabel.setAttribute('for', `${floor}-packer1-${stationNumber}`);
+      packerGroup.appendChild(packerLabel);
+
+      for (let i = 1; i <= 2; i++) {
+        const packerInput = document.createElement('input');
+        packerInput.type = 'text';
+        packerInput.id = `${floor}-packer${i}-${stationNumber}`;
+        packerInput.autocomplete = 'off';
+        packerInput.addEventListener('input', () => {
+          saveDataToFirestore(collectRosterData());
+          updateCounts();
+        });
+        packerGroup.appendChild(packerInput);
+      }
+
+      const inputsContainer = document.createElement('div');
+      inputsContainer.className = 'station-inputs';
+      inputsContainer.appendChild(pickerGroup);
+      inputsContainer.appendChild(packerGroup);
+      card.appendChild(inputsContainer);
+      container.appendChild(card);
     });
-  </script>
+  });
+
+  ['p2', 'p3', 'p4'].forEach(floor => {
+    ['ps1', 'ps2', 'ws1', 'ws2'].forEach(role => {
+      const input = document.getElementById(`${floor}-${role}`);
+      if (input) {
+        input.addEventListener('input', () => {
+          saveDataToFirestore(collectRosterData());
+          updateCounts();
+        });
+      }
+    });
+  });
+
+  for (let i = 1; i <= 4; i++) {
+    const input = document.getElementById(`pp${i}`);
+    if (input) {
+      input.addEventListener('input', () => {
+        saveDataToFirestore(collectRosterData());
+        updateCounts();
+      });
+    }
+  }
+
+  ['p2', 'p3', 'p4'].forEach(floor => {
+    const input = document.getElementById(`${floor}-pa`);
+    if (input) {
+      input.addEventListener('input', () => {
+        saveDataToFirestore(collectRosterData());
+      });
+    }
+  });
+
+  function clearAll() {
+    if(!confirm('Clear all data and reset the board?')) return;
+
+    const floors = ['p2', 'p3', 'p4'];
+    const stationsByFloor = {
+        p2: Array.from({ length: 12 }, (_, i) => 201 + i),
+        p3: Array.from({ length: 12 }, (_, i) => 301 + i),
+        p4: Array.from({ length: 12 }, (_, i) => 401 + i)
+    };
+
+    // Clear all inputs and reset toggles
+    floors.forEach(floor => {
+        stationsByFloor[floor].forEach((stationNumber, index) => {
+            // Clear picker and packer inputs
+            ['picker', 'packer1', 'packer2'].forEach(role => {
+                const input = document.getElementById(`${floor}-${role}-${stationNumber}`);
+                if(input) input.value = '';
+            });
+            
+            // Reset toggle button
+            const status = document.querySelector(
+                `#${floor}-stations .station-card:nth-child(${index + 1}) .station-status`
+            );
+            if(status) {
+                status.classList.remove('active');
+                status.classList.add('inactive');
+                status.textContent = 'No';
+                status.setAttribute('aria-pressed', 'false');
+                status.dataset.active = 'false';
+            }
+        });
+
+        // Clear PA/PG
+        const pa = document.getElementById(`${floor}-pa`);
+        if(pa) pa.value = '';
+        
+        // Clear PS and WS
+        ['ps1', 'ps2', 'ws1', 'ws2'].forEach(role => {
+            const input = document.getElementById(`${floor}-${role}`);
+            if(input) input.value = '';
+        });
+    });
+
+    // Clear PP
+    for(let i = 1; i <= 4; i++) {
+        const ppInput = document.getElementById(`pp${i}`);
+        if(ppInput) ppInput.value = '';
+    }
+
+    // Force update counts immediately
+    updateCounts();
+    
+    // Save empty state to Firestore
+    saveDataToFirestore(collectRosterData());
+}
+
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear All';
+  clearBtn.style.position = 'fixed';
+  clearBtn.style.top = '12px';
+  clearBtn.style.right = '12px';
+  clearBtn.style.padding = '8px 14px';
+  clearBtn.style.backgroundColor = '#f44336';
+  clearBtn.style.color = 'white';
+  clearBtn.style.border = 'none';
+  clearBtn.style.borderRadius = '6px';
+  clearBtn.style.cursor = 'pointer';
+  clearBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+  clearBtn.addEventListener('click', clearAll);
+  document.body.appendChild(clearBtn);
+
+  if (window.netlifyIdentity) {
+    window.netlifyIdentity.on('init', user => {
+      if (!user) {
+        window.netlifyIdentity.on('login', () => {
+          document.location.href = '/admin/';
+        });
+      }
+    });
+  }
+});
+</script>
+<style>
+  :root {
+    --p2-color: #4caf50;
+    --p3-color: #2196f3;
+    --p4-color: #9c27b0;
+    --header-color: #333;
+    --active-color: #4caf50;
+    --inactive-color: #f44336;
+  }
+
+  input {
+    text-transform: uppercase;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 10px 20px 40px 20px;
+    background-color: #f5f5f5;
+  }
+
+  h1 {
+    color: var(--header-color);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .header-container {
+    background-color: #f8f8f8;
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .floors-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .floor {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+    padding-bottom: 20px;
+    flex: 1 1 320px;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .floor-name {
+    font-weight: 700;
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 12px 0 8px 0;
+    color: white;
+  }
+  
+  .floor.p2 .floor-name {
+    background-color: var(--p2-color);
+  }
+  
+  .floor.p3 .floor-name {
+    background-color: var(--p3-color);
+  }
+  
+  .floor.p4 .floor-name {
+    background-color: var(--p4-color);
+  }
+
+  .pa-container {
+    display: flex;
+    padding: 10px 15px 10px 15px;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .station-input-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 80px;
+    gap: 4px;
+  }
+  
+  .station-label {
+    font-size: 0.75em;
+    color: #666;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    height: 20px;
+    line-height: 22px;
+    margin-bottom: 4px;
+  }
+  
+  .station-input-group input {
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 0.85em;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 70px;
+  }
+  
+  .station-input-group input:focus {
+    outline: none;
+    border-color: #aaa;
+  }
+
+  .stations-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 15px;
+    margin-bottom: 15px;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .station-card {
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 6px 8px;
+    background-color: #fafafa;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+
+  .station-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+    min-width: 42px;
+    flex-shrink: 0;
+  }
+
+  .station-status {
+    cursor: pointer;
+    user-select: none;
+    border-radius: 10px;
+    padding: 2px 8px;
+    min-width: 20px;
+    height: 16px;
+    line-height: 18px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.70rem;
+    color: white;
+    border: 2px solid transparent;
+    transition: background-color 0.3s, border-color 0.3s;
+    flex-shrink: 0;
+    outline-offset: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .station-status.active {
+    background-color: var(--active-color);
+    border-color: #3a7d3a;
+    color: white;
+  }
+
+  .station-status.inactive {
+    background-color: var(--inactive-color);
+    border-color: #a32e2e;
+    color: white;
+  }
+
+  .station-status:hover,
+  .station-status:focus-visible {
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+    outline: none;
+  }
+
+  .station-inputs {
+    display: flex;
+    gap: 8px;
+    flex: 1 1 auto;
+    overflow-x: auto;
+    align-items: flex-start;
+  }
+
+  .station-input-group.picker-group,
+  .station-input-group.packer-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .station-input-group.packer-group > input {
+    margin-bottom: 4px;
+  }
+
+  .ps-ws-container {
+    padding: 0 15px 10px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ps-ws-line {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .floor-totals {
+    margin: 0 15px;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    border-top: 1px solid #ddd;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+  }
+  
+  .floor-totals > div {
+    min-width: 90px;
+    text-align: center;
+  }
+
+  .pp-section {
+    margin-top: 20px;
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.1);
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .summary {
+    margin-top: 30px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    padding: 15px 20px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+  
+  .summary-title {
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+    color: var(--header-color);
+  }
+  
+  .summary-grid {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    font-size: 1.1rem;
+  }
+  
+  .summary-item {
+    min-width: 120px;
+  }
+  
+  .summary-label {
+    color: #555;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  
+  .summary-value {
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: #222;
+  }
+
+  .last-saved {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #666;
+  }
+
+  @media (max-width: 1050px) {
+    .floors-container {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .floor {
+      max-width: 320px;
+      flex-basis: 320px;
+      margin-bottom: 20px;
+    }
+    
+    .summary-grid {
+      flex-wrap: wrap;
+      gap: 30px;
+    }
+    
+    .pp-section {
+      max-width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .summary-grid {
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .pp-section {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+
+  .status-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+  }
+  
+  .status-message.show {
+    opacity: 1;
+  }
+  
+  .status-message.error {
+    background-color: #f44336;
+  }
+</style>
+</head>
+<body>
+
+<h1>P2R Team Roster Board</h1>
+<div id="last-saved" class="last-saved"></div>
+<div id="status-message" class="status-message"></div>
+
+<div class="floors-container" role="region" aria-label="Floors roster">
+  <section class="floor p2" aria-label="P2 Floor">
+    <div class="floor-name">P2
+      <div class="floor-totals" aria-label="P2 Floor totals">
+        <div>P2 Stations: <span id="p2-total-active">0</span></div>
+        <div>Pickers: <span id="p2-total-pickers">0</span> | Packers: <span id="p2-total-packers">0</span></div>
+      </div>
+    </div>
+
+    <div class="pa-container">
+      <div class="station-input-group">
+        <div class="station-label">PA/PG</div>
+        <input type="text" id="p2-pa" />
+      </div>
+    </div>
+
+    <div class="stations-container" id="p2-stations"></div>
+
+    <div class="ps-ws-container">
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">PS 1</div>
+          <input type="text" id="p2-ps1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">PS 2</div>
+          <input type="text" id="p2-ps2" />
+        </div>
+      </div>
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">WS 1</div>
+          <input type="text" id="p2-ws1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">WS 2</div>
+          <input type="text" id="p2-ws2" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="floor p3" aria-label="P3 Floor">
+    <div class="floor-name">P3
+      <div class="floor-totals" aria-label="P3 Floor totals">
+        <div>P3 Stations: <span id="p3-total-active">0</span></div>
+        <div>Pickers: <span id="p3-total-pickers">0</span> | Packers: <span id="p3-total-packers">0</span></div>
+      </div>
+    </div>
+
+    <div class="pa-container">
+      <div class="station-input-group">
+        <div class="station-label">PA/PG</div>
+        <input type="text" id="p3-pa" />
+      </div>
+    </div>
+
+    <div class="stations-container" id="p3-stations"></div>
+
+    <div class="ps-ws-container">
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">PS 1</div>
+          <input type="text" id="p3-ps1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">PS 2</div>
+          <input type="text" id="p3-ps2" />
+        </div>
+      </div>
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">WS 1</div>
+          <input type="text" id="p3-ws1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">WS 2</div>
+          <input type="text" id="p3-ws2" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="floor p4" aria-label="P4 Floor">
+    <div class="floor-name">P4
+      <div class="floor-totals" aria-label="P4 Floor totals">
+        <div>P4 Stations: <span id="p4-total-active">0</span></div>
+        <div>Pickers: <span id="p4-total-pickers">0</span> | Packers: <span id="p4-total-packers">0</span></div>
+      </div>
+    </div>
+
+    <div class="pa-container">
+      <div class="station-input-group">
+        <div class="station-label">PA/PG</div>
+        <input type="text" id="p4-pa" />
+      </div>
+    </div>
+
+    <div class="stations-container" id="p4-stations"></div>
+
+    <div class="ps-ws-container">
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">PS 1</div>
+          <input type="text" id="p4-ps1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">PS 2</div>
+          <input type="text" id="p4-ps2" />
+        </div>
+      </div>
+      <div class="ps-ws-line">
+        <div class="station-input-group">
+          <div class="station-label">WS 1</div>
+          <input type="text" id="p4-ws1" />
+        </div>
+        <div class="station-input-group">
+          <div class="station-label">WS 2</div>
+          <input type="text" id="p4-ws2" />
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="pp-section" aria-label="PP Team">
+  <div class="station-input-group">
+    <div class="station-label">PP 1</div>
+    <input type="text" id="pp1" />
+  </div>
+  <div class="station-input-group">
+    <div class="station-label">PP 2</div>
+    <input type="text" id="pp2" />
+  </div>
+  <div class="station-input-group">
+    <div class="station-label">PP 3</div>
+    <input type="text" id="pp3" />
+  </div>
+  <div class="station-input-group">
+    <div class="station-label">PP 4</div>
+    <input type="text" id="pp4" />
+  </div>
+</section>
+
+<section class="summary" aria-label="Summary totals">
+  <div class="summary-title">Indirect Totals</div>
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="summary-label">PS:</div>
+      <div id="sum-indirect-ps" class="summary-value">0</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">WS:</div>
+      <div id="sum-indirect-ws" class="summary-value">0</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">PP:</div>
+      <div id="sum-pp" class="summary-value">0</div>
+    </div>
+  </div>
+</section>
+
 </body>
 </html>
